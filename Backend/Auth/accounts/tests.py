@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -77,3 +78,46 @@ class AuthenticationTests(APITestCase):
 		user = User.objects.get(email="alex@example.com")
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
 		self.assertTrue(check_password(self.password, user.password))
+
+	def test_user_list_and_details_require_staff_access(self):
+		self.signup()
+		list_url = "/api/users/"
+		detail_url = f"/api/users/{User.objects.get().id}/"
+
+		anonymous_response = self.client.get(list_url)
+		self.assertIn(
+			anonymous_response.status_code,
+			(status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+		)
+
+		staff_user = get_user_model().objects.create_user(
+			username="staff",
+			password="safe-password",
+			is_staff=True,
+		)
+		self.client.force_authenticate(user=staff_user)
+
+		self.assertEqual(self.client.get(list_url).status_code, status.HTTP_200_OK)
+		self.assertEqual(self.client.get(detail_url).status_code, status.HTTP_200_OK)
+		self.assertEqual(
+			self.client.get("/api/users/999999/").status_code,
+			status.HTTP_404_NOT_FOUND,
+		)
+
+	def test_cors_allows_only_local_frontend_origins(self):
+		allowed_response = self.client.options(
+			self.login_url,
+			HTTP_ORIGIN="http://localhost:5173",
+			HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+		)
+		blocked_response = self.client.options(
+			self.login_url,
+			HTTP_ORIGIN="https://untrusted.example",
+			HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+		)
+
+		self.assertEqual(
+			allowed_response["Access-Control-Allow-Origin"],
+			"http://localhost:5173",
+		)
+		self.assertNotIn("Access-Control-Allow-Origin", blocked_response)
