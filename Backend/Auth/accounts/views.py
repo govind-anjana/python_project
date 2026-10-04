@@ -2,8 +2,11 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from .models import User
@@ -85,6 +88,7 @@ def login(request):
 
 # GET All Users
 @api_view(['GET'])
+@permission_classes([IsAdminUser])
 def get_users(request):
     users = User.objects.all()
 
@@ -100,8 +104,9 @@ def get_users(request):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsAdminUser])
 def single_user(request, id):
-    user = User.objects.get(id=id)
+    user = get_object_or_404(User, id=id)
 
     data = {
         "id": user.id,
