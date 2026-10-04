@@ -111,3 +111,27 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+:root {
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0;
+  color-scheme: light;
+  color: #22291f;
+  background: #fbfbf8;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+}
+
+#root {
+  width: 100%;
+  max-width: none;
+  min-height: 100svh;
+  margin: 0;
+  border: 0;
+  text-align: left;
+  display: block;
+}
