@@ -1,3 +1,79 @@
-from django.test import TestCase
+from django.contrib.auth.hashers import check_password
+from rest_framework import status
+from rest_framework.test import APITestCase
 
-# Create your tests here.
+from .models import User
+
+
+class AuthenticationTests(APITestCase):
+	signup_url = "/api/signup/"
+	login_url = "/api/login/"
+	password = "Tr0ub4dor&3"
+
+	def signup(self, **overrides):
+		payload = {
+			"name": "Alex Morgan",
+			"email": "alex@example.com",
+			"password": self.password,
+		}
+		payload.update(overrides)
+		return self.client.post(self.signup_url, payload, format="json")
+
+	def test_signup_stores_a_hashed_password(self):
+		response = self.signup()
+
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		user = User.objects.get(email="alex@example.com")
+		self.assertNotEqual(user.password, self.password)
+		self.assertTrue(check_password(self.password, user.password))
+
+	def test_signup_rejects_duplicate_email(self):
+		self.signup()
+
+		response = self.signup(email="ALEX@example.com")
+
+		self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+		self.assertEqual(response.data["msg"], "Email already exists")
+
+	def test_signup_rejects_invalid_email_and_short_password(self):
+		invalid_email = self.signup(email="not-an-email")
+		short_password = self.signup(password="short")
+
+		self.assertEqual(invalid_email.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertEqual(short_password.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertEqual(User.objects.count(), 0)
+
+	def test_login_accepts_hashed_password_and_rejects_wrong_password(self):
+		self.signup()
+
+		valid_response = self.client.post(
+			self.login_url,
+			{"email": "alex@example.com", "password": self.password},
+			format="json",
+		)
+		invalid_response = self.client.post(
+			self.login_url,
+			{"email": "alex@example.com", "password": "wrong-password"},
+			format="json",
+		)
+
+		self.assertEqual(valid_response.status_code, status.HTTP_200_OK)
+		self.assertEqual(valid_response.data["msg"], "Login Success")
+		self.assertEqual(invalid_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+	def test_login_hashes_existing_plaintext_password(self):
+		User.objects.create(
+			name="Alex Morgan",
+			email="alex@example.com",
+			password=self.password,
+		)
+
+		response = self.client.post(
+			self.login_url,
+			{"email": "alex@example.com", "password": self.password},
+			format="json",
+		)
+
+		user = User.objects.get(email="alex@example.com")
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertTrue(check_password(self.password, user.password))
