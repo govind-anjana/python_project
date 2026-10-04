@@ -2,8 +2,9 @@ import { useState } from "react";
 import heroImg from "./assets/hero.png";
 import "./App.css";
 
-const apiRoot =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+const apiRoot = (
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+).replace(/\/+$/, "");
 
 function App() {
   const [mode, setMode] = useState("login");
@@ -34,12 +35,12 @@ function App() {
           }),
         },
       );
-      const result = await response.json();
+      const result = await response.json().catch(() => null);
       const expectedMessage = isSignup ? "Signup Success" : "Login Success";
 
-      if (!response.ok || result.msg !== expectedMessage) {
+      if (!response.ok || result?.msg !== expectedMessage) {
         throw new Error(
-          result.msg || "Something went wrong. Please try again.",
+          result?.msg || "Could not complete the request. Please try again.",
         );
       }
 
