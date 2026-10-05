@@ -10,7 +10,7 @@ class AuthenticationTests(APITestCase):
 	signup_url = "/api/signup/"
 	login_url = "/api/login/"
 	password = "Tr0ub4dor&3"
-
+#this are to api to create to endpoint
 	def signup(self, **overrides):
 		payload = {
 			"name": "Alex Morgan",
